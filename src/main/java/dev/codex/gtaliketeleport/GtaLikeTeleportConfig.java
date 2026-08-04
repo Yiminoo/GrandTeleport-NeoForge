@@ -9,6 +9,7 @@ import java.io.StringReader;
 import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
@@ -69,6 +70,16 @@ public final class GtaLikeTeleportConfig {
     private static final String ENABLE_WAYSTONES_KEY = "enableWaystones";
     private static final String ENABLE_JOURNEYMAP_KEY = "enableJourneyMap";
     private static final String ENABLE_PORTALS_KEY = "enablePortals";
+    private static final Map<ZoomDimension, String> SMOOTH_ZOOM_OUT_KEYS = new HashMap<>();
+    private static final Map<ZoomDimension, String> SMOOTH_ZOOM_IN_KEYS = new HashMap<>();
+    static {
+        SMOOTH_ZOOM_OUT_KEYS.put(ZoomDimension.OVERWORLD, "smoothZoomOverworldOut");
+        SMOOTH_ZOOM_OUT_KEYS.put(ZoomDimension.NETHER, "smoothZoomNetherOut");
+        SMOOTH_ZOOM_OUT_KEYS.put(ZoomDimension.END, "smoothZoomEndOut");
+        SMOOTH_ZOOM_IN_KEYS.put(ZoomDimension.OVERWORLD, "smoothZoomOverworldIn");
+        SMOOTH_ZOOM_IN_KEYS.put(ZoomDimension.NETHER, "smoothZoomNetherIn");
+        SMOOTH_ZOOM_IN_KEYS.put(ZoomDimension.END, "smoothZoomEndIn");
+    }
     private static final String ENABLE_SATELLITE_CAMERA_FX_KEY = "enableSatelliteCameraFx";
     private static final String SATELLITE_GAMMA_STRENGTH_KEY = "satelliteGammaStrength";
     private static final String SATELLITE_GAMMA_DECAY_TICKS_KEY = "satelliteGammaDecayTicks";
@@ -92,10 +103,10 @@ public final class GtaLikeTeleportConfig {
     private static final double MAX_SATELLITE_UNIT = 1.0D;
     private static final double MIN_SATELLITE_SHADER_SCALE = 0.0D;
     private static final double MAX_SATELLITE_SHADER_SCALE = 3.0D;
-    private static final int CURRENT_CONFIG_VERSION = 8;
+    private static final int CURRENT_CONFIG_VERSION = 9;
     private static final String CONFIG_VERSION_KEY = "configVersion";
     private static final String DEFAULT_CONFIG_PROPERTIES = """
-configVersion=8
+configVersion=9
 enableSatelliteCameraFx=false
 satelliteGammaStrength=2.0
 satelliteGammaDecayTicks=6.0
@@ -115,6 +126,12 @@ enableVanillaTp=true
 enableWaystones=true
 enableJourneyMap=true
 enablePortals=true
+smoothZoomOverworldOut=false
+smoothZoomNetherOut=false
+smoothZoomEndOut=false
+smoothZoomOverworldIn=false
+smoothZoomNetherIn=false
+smoothZoomEndIn=false
 bodyGlideHeight=0.5
 bodyGlideTicks=10
 configLayoutAspectLocked=false
@@ -125,8 +142,8 @@ configLayoutDebugEnabled=false
 configLayoutEditorButtonVisible=false
 configLayoutGridEnabled=true
 configLayoutSnapEnabled=false
-crossDimensionTravelEnabled=false
-customSoundVolume=0.5
+crossDimensionTravelEnabled=true
+customSoundVolume=1.0
 customSoundsEnabled=true
 effectEnabled=true
 endZoomHeightsLinked=true
@@ -141,12 +158,12 @@ fallbackChunkFadeEnabled=false
 localPlayerHideTicks=2
 minecraftSoundVolume=0.5
 netherZoomHeightsLinked=true
-netherZoomInStage1=20
-netherZoomInStage2=40
-netherZoomInStage3=60
-netherZoomOutStage1=20
-netherZoomOutStage2=40
-netherZoomOutStage3=60
+netherZoomInStage1=10
+netherZoomInStage2=20
+netherZoomInStage3=30
+netherZoomOutStage1=10
+netherZoomOutStage2=20
+netherZoomOutStage3=30
 playerFreezeEnabled=true
 warpPlateTransitionsEnabled=true
 zoomHeightsLinked=true
@@ -166,6 +183,7 @@ zoomStageGlideHeight=0.5
 zoomStageGlideTicks=13
             """;
     private static final double[] DEFAULT_STAGE_HEIGHTS = {20.0D, 40.0D, 60.0D};
+    private static final double[] DEFAULT_NETHER_STAGE_HEIGHTS = {10.0D, 20.0D, 30.0D};
     private static final double MIN_STAGE_HEIGHT = 8.0D;
     private static final double MAX_STAGE_HEIGHT = 512.0D;
     private static final double MIN_STAGE_GAP = 1.0D;
@@ -187,20 +205,20 @@ zoomStageGlideTicks=13
     private static final int MAX_LOCAL_PLAYER_HIDE_TICKS = 20;
     private static final int DEFAULT_LOCAL_PLAYER_HIDE_TICKS = 2;
     private static final double DEFAULT_MINECRAFT_SOUND_VOLUME = 1.0D;
-    private static final double DEFAULT_CUSTOM_SOUND_VOLUME = 0.3D;
+    private static final double DEFAULT_CUSTOM_SOUND_VOLUME = 1.0D;
     private static final double MIN_SOUND_VOLUME = 0.1D;
     private static final double MAX_SOUND_VOLUME = 1.0D;
 
     private static Path configPath;
     private static boolean effectEnabled = true;
     private static boolean playerFreezeEnabled = true;
-    private static boolean crossDimensionTravelEnabled = false;
+    private static boolean crossDimensionTravelEnabled = true;
     private static boolean zoomHeightsLinked = true;
     private static double[] zoomOutStageHeights = DEFAULT_STAGE_HEIGHTS.clone();
     private static double[] zoomInStageHeights = DEFAULT_STAGE_HEIGHTS.clone();
     private static boolean netherZoomHeightsLinked = true;
-    private static double[] netherZoomOutStageHeights = DEFAULT_STAGE_HEIGHTS.clone();
-    private static double[] netherZoomInStageHeights = DEFAULT_STAGE_HEIGHTS.clone();
+    private static double[] netherZoomOutStageHeights = DEFAULT_NETHER_STAGE_HEIGHTS.clone();
+    private static double[] netherZoomInStageHeights = DEFAULT_NETHER_STAGE_HEIGHTS.clone();
     private static boolean endZoomHeightsLinked = true;
     private static double[] endZoomOutStageHeights = DEFAULT_STAGE_HEIGHTS.clone();
     private static double[] endZoomInStageHeights = DEFAULT_STAGE_HEIGHTS.clone();
@@ -234,6 +252,14 @@ zoomStageGlideTicks=13
     private static boolean enableWaystones = true;
     private static boolean enableJourneyMap = true;
     private static boolean enablePortals = true;
+    private static final EnumMap<ZoomDimension, Boolean> smoothZoomOutEnabled = new EnumMap<>(ZoomDimension.class);
+    private static final EnumMap<ZoomDimension, Boolean> smoothZoomInEnabled = new EnumMap<>(ZoomDimension.class);
+    static {
+        for (ZoomDimension dim : ZoomDimension.values()) {
+            smoothZoomOutEnabled.put(dim, false);
+            smoothZoomInEnabled.put(dim, false);
+        }
+    }
     private static boolean enableSatelliteCameraFx = false;
     private static double satelliteGammaStrength = DEFAULT_SATELLITE_GAMMA_STRENGTH;
     private static double satelliteGammaDecayTicks = DEFAULT_SATELLITE_GAMMA_DECAY_TICKS;
@@ -417,6 +443,24 @@ zoomStageGlideTicks=13
         return save();
     }
 
+    public static boolean isSmoothZoomOutEnabled(ZoomDimension dim) {
+        return smoothZoomOutEnabled.getOrDefault(sanitizeZoomDimension(dim), false);
+    }
+
+    public static boolean setSmoothZoomOutEnabled(ZoomDimension dim, boolean enabled) {
+        smoothZoomOutEnabled.put(sanitizeZoomDimension(dim), enabled);
+        return save();
+    }
+
+    public static boolean isSmoothZoomInEnabled(ZoomDimension dim) {
+        return smoothZoomInEnabled.getOrDefault(sanitizeZoomDimension(dim), false);
+    }
+
+    public static boolean setSmoothZoomInEnabled(ZoomDimension dim, boolean enabled) {
+        smoothZoomInEnabled.put(sanitizeZoomDimension(dim), enabled);
+        return save();
+    }
+
     public static boolean isSatelliteCameraFxEnabled() {
         return enableSatelliteCameraFx;
     }
@@ -594,8 +638,8 @@ zoomStageGlideTicks=13
             bodyGlideTicks = DEFAULT_BODY_GLIDE_TICKS;
             zoomOutStageHeights = DEFAULT_STAGE_HEIGHTS.clone();
             zoomInStageHeights = DEFAULT_STAGE_HEIGHTS.clone();
-            netherZoomOutStageHeights = DEFAULT_STAGE_HEIGHTS.clone();
-            netherZoomInStageHeights = DEFAULT_STAGE_HEIGHTS.clone();
+            netherZoomOutStageHeights = DEFAULT_NETHER_STAGE_HEIGHTS.clone();
+            netherZoomInStageHeights = DEFAULT_NETHER_STAGE_HEIGHTS.clone();
             endZoomOutStageHeights = DEFAULT_STAGE_HEIGHTS.clone();
             endZoomInStageHeights = DEFAULT_STAGE_HEIGHTS.clone();
         }
@@ -873,8 +917,13 @@ zoomStageGlideTicks=13
         return MIN_STAGE_GAP;
     }
 
-    static double[] getDefaultStageHeights() {
-        return DEFAULT_STAGE_HEIGHTS.clone();
+    static double[] getDefaultStageHeights(ZoomDimension dim) {
+        switch (dim) {
+            case NETHER:
+                return DEFAULT_NETHER_STAGE_HEIGHTS.clone();
+            default:
+                return DEFAULT_STAGE_HEIGHTS.clone();
+        }
     }
 
     static int[] getDefaultStageTicks() {
@@ -1245,6 +1294,12 @@ zoomStageGlideTicks=13
         enableWaystones = Boolean.parseBoolean(properties.getProperty(ENABLE_WAYSTONES_KEY, Boolean.toString(enableWaystones)));
         enableJourneyMap = Boolean.parseBoolean(properties.getProperty(ENABLE_JOURNEYMAP_KEY, Boolean.toString(enableJourneyMap)));
         enablePortals = Boolean.parseBoolean(properties.getProperty(ENABLE_PORTALS_KEY, Boolean.toString(enablePortals)));
+        for (ZoomDimension dim : ZoomDimension.values()) {
+            String outKey = SMOOTH_ZOOM_OUT_KEYS.get(dim);
+            String inKey = SMOOTH_ZOOM_IN_KEYS.get(dim);
+            smoothZoomOutEnabled.put(dim, Boolean.parseBoolean(properties.getProperty(outKey, Boolean.toString(smoothZoomOutEnabled.get(dim)))));
+            smoothZoomInEnabled.put(dim, Boolean.parseBoolean(properties.getProperty(inKey, Boolean.toString(smoothZoomInEnabled.get(dim)))));
+        }
         enableSatelliteCameraFx = Boolean.parseBoolean(properties.getProperty(
                 ENABLE_SATELLITE_CAMERA_FX_KEY,
                 Boolean.toString(enableSatelliteCameraFx)
@@ -1402,6 +1457,12 @@ zoomStageGlideTicks=13
         }
         if (previousVersion < 8) {
             syncSoundPackProperties(properties);
+        }
+        if (previousVersion < 9) {
+            for (ZoomDimension dim : ZoomDimension.values()) {
+                properties.setProperty(SMOOTH_ZOOM_OUT_KEYS.get(dim), "false");
+                properties.setProperty(SMOOTH_ZOOM_IN_KEYS.get(dim), "false");
+            }
         }
     }
 
@@ -1563,6 +1624,10 @@ zoomStageGlideTicks=13
         properties.setProperty(ENABLE_WAYSTONES_KEY, Boolean.toString(enableWaystones));
         properties.setProperty(ENABLE_JOURNEYMAP_KEY, Boolean.toString(enableJourneyMap));
         properties.setProperty(ENABLE_PORTALS_KEY, Boolean.toString(enablePortals));
+        for (ZoomDimension dim : ZoomDimension.values()) {
+            properties.setProperty(SMOOTH_ZOOM_OUT_KEYS.get(dim), Boolean.toString(smoothZoomOutEnabled.get(dim)));
+            properties.setProperty(SMOOTH_ZOOM_IN_KEYS.get(dim), Boolean.toString(smoothZoomInEnabled.get(dim)));
+        }
         properties.setProperty(ENABLE_SATELLITE_CAMERA_FX_KEY, Boolean.toString(enableSatelliteCameraFx));
         properties.setProperty(SATELLITE_GAMMA_STRENGTH_KEY, Double.toString(satelliteGammaStrength));
         properties.setProperty(SATELLITE_GAMMA_DECAY_TICKS_KEY, Double.toString(satelliteGammaDecayTicks));
