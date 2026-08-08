@@ -7,7 +7,6 @@ import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.fml.loading.FMLEnvironment;
-import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
 import net.neoforged.neoforge.common.NeoForge;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -32,7 +31,7 @@ public final class GtaLikeTeleport {
         // Register client setup if we are on the physical client side
         if (FMLEnvironment.dist == Dist.CLIENT) {
             modEventBus.addListener(this::clientSetup);
-            modContainer.registerExtensionPoint(IConfigScreenFactory.class, (container, parent) -> new GtaLikeTeleportConfigScreen(parent));
+            dev.codex.gtaliketeleport.client.GtaLikeTeleportClient.registerConfigScreen(modContainer);
         }
     }
 
