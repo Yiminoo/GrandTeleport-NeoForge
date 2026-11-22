@@ -1,0 +1,59 @@
+name: Java CI with Gradle
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-neoforge:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          show-progress: false
+
+      - name: Set up JDK
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 25
+
+      - name: Build (NeoForge)
+        run: ./gradlew -p neoforge build
+
+      - uses: actions/upload-artifact@v6
+        with:
+          name: MouseTweaks-NeoForge
+          path: neoforge/build/libs/
+          if-no-files-found: error
+
+      - name: Test datagen
+        run: ./gradlew -p neoforge runClientData
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          show-progress: false
+
+      - name: Set up JDK
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 25
+
+      - run: sudo apt-get update -y; sudo apt-get install -y mesa-vulkan-drivers
+
+      - name: Build testmod
+        run: ./gradlew -p fabric testmodClientClasses
+
+      # Fabric Loom 1.15 runs xvfb-run for us on a Linux CI.
+      - name: Run gametest
+        run: ./gradlew -p fabric runClientGametest
+
+      - name: Upload screenshot
+        uses: actions/upload-artifact@v6
+        with:
+          name: screenshot
+          path: fabric/run/screenshots/
+          if-no-files-found: error
