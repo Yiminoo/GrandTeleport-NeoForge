@@ -22,3 +22,10 @@ jobs:
 
       - name: Build (NeoForge)
         run: ./gradlew build
+
+      
+      - uses: actions/upload-artifact@v6
+        with:
+          name: GTP-neoforge
+          path: /build/libs/
+          if-no-files-found: error
