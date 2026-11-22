@@ -22,7 +22,7 @@ jobs:
 
       - uses: actions/upload-artifact@v6
         with:
-          name: MouseTweaks-NeoForge
+          name: GTP-neoforge
           path: neoforge/build/libs/
           if-no-files-found: error
 
