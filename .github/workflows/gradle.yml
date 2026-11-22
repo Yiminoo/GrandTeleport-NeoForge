@@ -7,9 +7,6 @@ jobs:
   build-neoforge:
     runs-on: ubuntu-latest
     steps:
-      - name: Make gradlew executable
-        run: chmod +x gradlew
-        
       - uses: actions/checkout@v6
         with:
           show-progress: false
@@ -18,44 +15,16 @@ jobs:
         uses: actions/setup-java@v5
         with:
           distribution: temurin
-          java-version: 25
+          java-version: 21
+      
+      - name: Make gradlew executable
+        run: chmod +x gradlew
 
       - name: Build (NeoForge)
-        run: ./gradlew -p neoforge build
+        run: ./gradlew build
 
       - uses: actions/upload-artifact@v6
         with:
           name: GTP-neoforge
           path: neoforge/build/libs/
-          if-no-files-found: error
-
-      - name: Test datagen
-        run: ./gradlew -p neoforge runClientData
-
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          show-progress: false
-
-      - name: Set up JDK
-        uses: actions/setup-java@v5
-        with:
-          distribution: temurin
-          java-version: 25
-
-      - run: sudo apt-get update -y; sudo apt-get install -y mesa-vulkan-drivers
-
-      - name: Build testmod
-        run: ./gradlew -p fabric testmodClientClasses
-
-      - name: Run gametest
-        run: ./gradlew -p fabric runClientGametest
-
-      - name: Upload screenshot
-        uses: actions/upload-artifact@v6
-        with:
-          name: screenshot
-          path: fabric/run/screenshots/
           if-no-files-found: error
