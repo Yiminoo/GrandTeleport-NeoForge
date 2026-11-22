@@ -27,5 +27,5 @@ jobs:
       - uses: actions/upload-artifact@v6
         with:
           name: GTP-neoforge
-          path: /build/libs/*.jar
+          path: build/libs/*.jar
           if-no-files-found: error
